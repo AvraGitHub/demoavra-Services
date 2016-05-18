@@ -91,22 +91,26 @@ $i= 0;
 $j=0;
 $n=0;
 $sqlAtt = "select ATT_STR_DATE as startdate, ATT_END_DATE as enddate, ATT_UI_BEACON as beacon, street_number as street, route as route, postal_code as postal, country as country from ATTENDANCE where (CAST(ATT_STR_DATE as date) between '".$STR_DATE."' and '".$END_DATE."' AND ATT_USER_ID=".$USER_ID.") OR (CAST(ATT_END_DATE as date) between '".$STR_DATE."' and '".$END_DATE."' AND ATT_USER_ID=".$USER_ID.")";
+
 $resultAtt = $conn->query($sqlAtt);
   if ($resultAtt->num_rows > 0) {
-    while($row = $resultAtt->fetch_assoc()){
-      $i=$i+1;
-      $ATT_STR_DATE[$i] = $row["startdate"];
-      $ATT_END_DATE[$i] = $row["enddate"];
-      $beacon[$i] = $row["beacon"];
-      $street_number[$i] = $row["street"];
-      $route[$i] =  $row["route"];
-      $postal_code[$i] = $row["postal"];
-      $country[$i] =  $row["country"];
-    }
+
+while($row = $resultAtt->fetch_assoc()){
+    $i=$i+1;
+  $ATT_STR_DATE[$i] = $row["startdate"];
+  $ATT_END_DATE[$i] = $row["enddate"];
+  $beacon[$i] = $row["beacon"];
+  $street_number[$i] = $row["street"];
+  $route[$i] =  $row["route"];
+  $postal_code[$i] = $row["postal"];
+  $country[$i] =  $row["country"];
+
+
+
 }
 
+}
 $length= count($ATT_STR_DATE);
-
 $n=1;
 while($n<=$length){
   $k=$n+1;
@@ -118,8 +122,11 @@ while($n<=$length){
       while($row = $resultDiff->fetch_assoc()) {
             $timediff = $row["timeDiff"];
         }
+
         if($street_number[$n] == '' && $route[$n] == '' && $postal_code[$n] == 0 && $country[$n] == ''){
+
           $sqlB= "SELECT BE_UI_DESCRIPTION as description FROM BEACON_MASTER where BE_UI_ID='".$beacon[$n]."'";
+
           $result_beacon = $conn->query($sqlB);
            if ($result_beacon->num_rows > 0) {
               // output data of each row
@@ -131,6 +138,7 @@ while($n<=$length){
             }
         }
         else{
+
           $temp = $street_number[$n] . ' ' . $route[$n] . ' ' . $postal_code[$n] . ' ' . $country[$n];
           $beacon_desc[$n]= str_replace("null","",$temp);
           $beacon_desc[$n]= str_replace("0","",$beacon_desc[$n]);
@@ -140,7 +148,6 @@ while($n<=$length){
         $n= $n+2;
     }else{
       $n=$n+1;
-
     }
   }
   $sqlMax = "select MAX(ATT_END_DATE) as maxend ,MAX(ATT_STR_DATE) as maxatt from ATTENDANCE where (CAST(ATT_STR_DATE as date) between '".$STR_DATE."' and '".$END_DATE."' AND ATT_USER_ID=".$USER_ID.") OR (CAST(ATT_END_DATE as date) between '".$STR_DATE."' and '".$END_DATE."' AND ATT_USER_ID=".$USER_ID.")";
@@ -160,6 +167,7 @@ while($row = $resultGetid->fetch_assoc()) {
         $route[$i] =  $row["route"];
         $postal_code[$i] = $row["postal"];
         $country[$i] =  $row["country"];
+     
         if($street_number[$i] == '' && $route[$i] == '' && $postal_code[$i] == 0 && $country[$i] == ''){
 
           $sqlB= "SELECT BE_UI_DESCRIPTION as description FROM BEACON_MASTER where BE_UI_ID='".$beacon[$i]."'";
@@ -168,6 +176,8 @@ while($row = $resultGetid->fetch_assoc()) {
            if ($result_beacon->num_rows > 0) {
               // output data of each row
             while($row = $result_beacon->fetch_assoc()) {
+          
+            
                 $beacon_desc[$i]= $row["description"];
            }
             }else{
@@ -221,7 +231,8 @@ while($row = $resultGetid->fetch_assoc()) {
   $deffectsData = getDataFromQuery($conn, $sqlD);
 */
 
-  $sqlS = "SELECT * FROM `SAP_ACTIVITY_LOG` WHERE  " . implode(' AND ', $whereS);
+  //$sqlS = "SELECT * FROM `SAP_ACTIVITY_LOG` WHERE  " . implode(' AND ', $whereS);
+  $sqlS = "SELECT * FROM AvraQuality.SAP_ACTIVITY_LOG where (CAST(SAP_STR_DATE as date) between '".$STR_DATE."' and '".$END_DATE."' AND SAL_USER_ID=".$USER_ID.") OR (CAST(SAP_END_DATE as date) between '".$STR_DATE."' and '".$END_DATE."' AND SAL_USER_ID=".$USER_ID.")";
   $sap_activity_logData = getDataFromQuery($conn, $sqlS);
 
 
@@ -253,15 +264,15 @@ function jsonResponce($array = array())
 function getConnection()
 {
 
-  $servername = "localhost:3306";
+  /*$servername = "localhost:3306";
   $username = "root";
   $password = "root";
-  $dbname = "AvraQuality";
+  $dbname = "AvraQuality";*/
 
-  /*$servername = "localhost";
+  $servername = "localhost";
   $username = "dev_avra";
   $password = "green123$";
-  $dbname = "AvraQuality";*/
+  $dbname = "AvraQuality";
 
 
   $conn = new mysqli($servername, $username, $password, $dbname);
