@@ -6,7 +6,8 @@ $base = $_REQUEST['BASE'];
 $head = $_REQUEST['HEAD'];
 $reponame = $_REQUEST['REPO_NAME'];
 $userauthor = $_REQUEST['USER_AUTHOR'];
-
+$useremail = $_REQUEST['USER_EMAIL'];
+     
 $url = str_replace("+++","...","https://api.github.com/repos/AvraGitHub/$reponame/compare/$base+++$head");
 
   $ch = curl_init();
@@ -42,11 +43,29 @@ $url = str_replace("+++","...","https://api.github.com/repos/AvraGitHub/$reponam
       if(strcmp($st,$status)==0){
             $sta = "UPDATED";
       }
-
+        
+      $conn = getConnection();   
       $p = json_encode($res->files[0]->patch);
+      
       $patch = str_replace('"', " ",$p);
-      $result = $sta . ': ' . $patch;
-
+      $patch = GetBetween("@@","@@",$patch);
+      $diffstart = GetBetween(",","+",$patch);
+      $diffend = substr($patch, strpos($patch, ",") + 1);
+      $diffend = substr($diffend, strpos($diffend, ",") + 1);
+      $result = $sta . ': ' . $patch . '-' . $diffstart . '-' . $diffend;
+      if ($diffend > $diffstart) 
+         { $lineadd = $diffend - $diffstart;
+           $result = 'ADDED: ' . $lineadd . ' lines';
+         }
+      elseif ($diffend < $diffstart) 
+         { $linedel = $diffstart - $diffend;
+           $result = 'DELETED: ' . $linedel . ' lines';
+         }
+      else 
+         { $result = 'CHANGED';
+         }
+      $result = mysqli_real_escape_string($conn,$result);
+      
       $ed = json_encode($res->commits[0]->commit->committer->date);
       $end = str_replace('"', " ",$ed);
       $enddt =  str_replace('T', " ",$end);
@@ -55,15 +74,34 @@ $url = str_replace("+++","...","https://api.github.com/repos/AvraGitHub/$reponam
       $comid = json_encode($res->commits[0]->sha);
       $commitid = str_replace('"', "",$comid);
 
+    if(empty($SAL_USER_ID)){
 
+        if(!empty($useremail)){
+            
+            $sqlquery = "SELECT USER_ID FROM USERS WHERE USER_EMAIL='$useremail'";
+             
+            $res = $conn->query($sqlquery);
+                
+            $resultobj = $res->fetch_assoc();  
+             
+            if($res->num_rows>0){
+             
+                if(!empty($resultobj['USER_ID'])){
+                    
+                   $SAL_USER_ID = $resultobj['USER_ID'];
+                }
+            }
+            
+        }
+    }
+
+     
      if (!empty($SAL_USER_ID) && !empty($SAP_OBJECT) && !empty($base) && !empty($head) && !empty($reponame) && !empty($userauthor))
      {
 
-          $conn = getConnection();
-
-          $sqlAtt = "INSERT INTO SAP_ACTIVITY_LOG (`SAL_USER_ID`,`SAP_OBJECT`, `SAP_OBJECT_NAME`, `SAP_OBJECT_DESC`, `SAP_STR_DATE`,
+            $sqlAtt = "INSERT INTO SAP_ACTIVITY_LOG (`SAL_USER_ID`,`SAP_OBJECT`, `SAP_OBJECT_NAME`, `SAP_OBJECT_DESC`, `SAP_STR_DATE`,
                            `SAP_END_DATE`,`COMMIT_ID`)VALUES ('$SAL_USER_ID','$SAP_OBJECT', '$file', '$result', '$strdate', '$enddate', '$commitid')";
-
+            
           if ($conn->query($sqlAtt) === TRUE)
           {
             $last_id = $conn->insert_id;
@@ -87,6 +125,18 @@ $url = str_replace("+++","...","https://api.github.com/repos/AvraGitHub/$reponam
     exit;
   }
 
+  function GetBetween($var1="",$var2="",$pool)
+  {
+    $temp1 = strpos($pool,$var1)+strlen($var1);
+    $result = substr($pool,$temp1,strlen($pool));
+    $dd=strpos($result,$var2);
+    if($dd == 0){
+         $dd = strlen($result);
+                }
+    return substr($result,0,$dd);
+  }
+
+
   function getConnection()
   {
 
@@ -99,7 +149,7 @@ $url = str_replace("+++","...","https://api.github.com/repos/AvraGitHub/$reponam
     $username = "dev_avra";
     $password = "green123$";
     $dbname = "AvraQuality";
-
+    
     $conn = new mysqli($servername, $username, $password, $dbname);
     if ($conn->connect_error)
     {
